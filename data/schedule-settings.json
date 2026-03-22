@@ -1,0 +1,34 @@
+{
+  "global": {
+    "startDate": "2026-03-22",
+    "endDate": "2026-04-21",
+    "shifts": [
+      {
+        "id": "1",
+        "name": "Morning Shift",
+        "startTime": "09:00",
+        "endTime": "13:00",
+        "slotDuration": 30
+      },
+      {
+        "id": "2",
+        "name": "Evening Shift",
+        "startTime": "16:00",
+        "endTime": "20:00",
+        "slotDuration": 30
+      }
+    ],
+    "blockedDays": [],
+    "blockedSlots": []
+  },
+  "services": {},
+  "availableServices": [
+    {
+      "id": "service-1774176252418",
+      "name": "tooth filling",
+      "duration": 50,
+      "price": 1000,
+      "description": "Service kjbfkdkd"
+    }
+  ]
+}

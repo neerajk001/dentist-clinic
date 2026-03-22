@@ -1,0 +1,1 @@
+import { config } from 'dotenv'; config({ path: '.env.local' }); import { supabase } from './src/lib/db'; async function run() { const { data, error } = await supabase.from('users').select('*').eq('role', 'doctor'); console.log('Doctors:', data); console.log('Error:', error); } run();
