@@ -10,6 +10,7 @@ export default function ScheduleSettingsPage() {
   const [settings, setSettings] = useState<ScheduleSettings['global'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [services, setServices] = useState<ServiceItem[]>([]);
 
@@ -29,24 +30,45 @@ export default function ScheduleSettingsPage() {
     setLoading(false);
   }
 
-  function handleServiceFormSubmit() {
-    if (!serviceForm.id || !serviceForm.name) return;
-    
-    // Auto-generate ID if left empty
-    const currentForm = { ...serviceForm };
-    if (!currentForm.id) {
-      currentForm.id = `service-${Date.now()}`;
+  async function persistServices(nextServices: ServiceItem[]) {
+    const previous = services;
+    setSaveError(null);
+    setServices(nextServices);
+    setSaving(true);
+    try {
+      await updateServices(nextServices);
+      await loadSettings();
+    } catch (error) {
+      setServices(previous);
+      setSaveError('Failed to save services. Please try again.');
+    } finally {
+      setSaving(false);
     }
+  }
 
+  async function handleServiceFormSubmit() {
+    if (!serviceForm.name.trim()) return;
+
+    // ID is optional in UI; generate if not provided.
+    const currentForm: ServiceItem = {
+      ...serviceForm,
+      id: serviceForm.id.trim() || `service-${Date.now()}`,
+      name: serviceForm.name.trim(),
+      description: serviceForm.description.trim(),
+      duration: serviceForm.duration > 0 ? serviceForm.duration : 30,
+      price: serviceForm.price >= 0 ? serviceForm.price : 0,
+    };
+
+    let updatedServices: ServiceItem[];
     if (editingIndex !== null) {
-      const updated = [...services];
-      updated[editingIndex] = currentForm;
-      setServices(updated);
+      updatedServices = [...services];
+      updatedServices[editingIndex] = currentForm;
       setEditingIndex(null);
     } else {
-      setServices([...services, currentForm]);
+      updatedServices = [...services, currentForm];
     }
-    
+
+    await persistServices(updatedServices);
     setServiceForm(initialServiceState);
   }
 
@@ -60,16 +82,23 @@ export default function ScheduleSettingsPage() {
     setEditingIndex(null);
   }
 
-  function handleRemoveService(index: number) {
+  async function handleRemoveService(index: number) {
     const newServices = [...services];
     newServices.splice(index, 1);
-    setServices(newServices);
+    await persistServices(newServices);
   }
 
   async function handleSaveServices() {
+    setSaveError(null);
     setSaving(true);
-    await updateServices(services);
-    setSaving(false);
+    try {
+      await updateServices(services);
+      await loadSettings();
+    } catch (error) {
+      setSaveError('Failed to save services. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSaveRange() {
@@ -266,6 +295,9 @@ export default function ScheduleSettingsPage() {
         <div className="mb-6">
           <h2 className="text-xl font-bold">Services & Treatments</h2>
           <p className="text-sm text-gray-500">Manage the services offered on the public booking page. Updates reflect instantly.</p>
+          {saveError && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2 mt-3">{saveError}</p>
+          )}
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
