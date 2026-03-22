@@ -41,7 +41,14 @@ export function DatePicker({ selected, onSelect, disabled }: DatePickerProps) {
             onSelect={handleSelect}
             disabled={disabled}
             initialFocus
-            className="rounded-md"
+            className="rounded-md text-black"
+            classNames={{
+              caption_label: 'text-black font-semibold',
+              weekday: 'text-black',
+              day: 'text-black',
+              day_button: 'text-black',
+              nav_button: 'text-black',
+            }}
           />
         </div>
       )}

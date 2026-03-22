@@ -6,9 +6,26 @@ import { revalidatePath } from 'next/cache';
 import { getScheduleSettings } from './schedule_settings';
 import { format } from 'date-fns';
 
+function getAllowedBookingDateStrings() {
+  const tomorrow = new Date();
+  tomorrow.setHours(0, 0, 0, 0);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const dayAfterTomorrow = new Date(tomorrow);
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+
+  return [format(tomorrow, 'yyyy-MM-dd'), format(dayAfterTomorrow, 'yyyy-MM-dd')];
+}
+
 export async function getAvailableSlots(date: Date, serviceDuration: number = 30) {
   const settings = await getScheduleSettings();
   const dateStr = format(date, 'yyyy-MM-dd');
+  const allowedDates = getAllowedBookingDateStrings();
+
+  // Booking is limited to tomorrow and day after tomorrow only.
+  if (!allowedDates.includes(dateStr)) {
+    return [];
+  }
 
   // 1. Check if date is within booking window
   if (dateStr < settings.global.startDate || dateStr > settings.global.endDate) {
@@ -109,11 +126,25 @@ export async function bookAppointment(formData: BookingFormData) {
     }
 
     const duration = service.duration;
+    const selectedDateStr = format(new Date(validated.date), 'yyyy-MM-dd');
+    const allowedDates = getAllowedBookingDateStrings();
+
+    if (!allowedDates.includes(selectedDateStr)) {
+      return { success: false, error: 'Bookings are available only for tomorrow and day after tomorrow.' };
+    }
 
     // Parse selected date and time
     const appointmentDate = new Date(validated.date);
     const [hours, minutes] = validated.timeSlot.split(':');
     appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    const slots = await getAvailableSlots(new Date(validated.date), duration);
+    if (!slots.includes(validated.timeSlot)) {
+      return {
+        success: false,
+        error: 'This time slot is not available for the selected date. Please choose another slot.'
+      };
+    }
 
     const appointmentEndTime = new Date(appointmentDate.getTime() + duration * 60000);
 

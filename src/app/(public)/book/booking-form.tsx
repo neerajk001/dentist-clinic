@@ -96,24 +96,25 @@ export function BookingForm({ minDateStr, maxDateStr, services = [], onBookingCo
     }
   };
 
-  // Generate dates constrained strictly by admin schedule window
+  // Show only two booking choices: tomorrow and day after tomorrow.
   const upcomingDates: Date[] = [];
+  const tomorrow = addDays(new Date(), 1);
+  const dayAfterTomorrow = addDays(new Date(), 2);
+
+  const candidates = [tomorrow, dayAfterTomorrow];
   if (minDateStr && maxDateStr) {
-    // Use format avoiding timezone bugs: 'YYYY-MM-DDT00:00:00'
-    let current = new Date(`${minDateStr}T00:00:00`);
+    const startDate = new Date(`${minDateStr}T00:00:00`);
     const endDate = new Date(`${maxDateStr}T00:00:00`);
-    
-    // Safety cap just in case the gap is multiple years
-    let limit = 0;
-    while (current <= endDate && limit < 90) {
-      upcomingDates.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-      limit++;
+
+    for (const date of candidates) {
+      const normalized = new Date(date);
+      normalized.setHours(0, 0, 0, 0);
+      if (normalized >= startDate && normalized <= endDate) {
+        upcomingDates.push(normalized);
+      }
     }
   } else {
-    for (let i = 0; i < 14; i++) {
-      upcomingDates.push(addDays(new Date(), i));
-    }
+    upcomingDates.push(...candidates);
   }
 
   useEffect(() => {
