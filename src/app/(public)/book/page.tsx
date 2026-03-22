@@ -1,6 +1,9 @@
 import { BookingForm } from './booking-form';
 import { getScheduleSettings } from '@/actions/schedule_settings';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function BookingPage() {
   const settings = await getScheduleSettings();
   
