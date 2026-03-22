@@ -3,6 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 import { revalidatePath } from 'next/cache';
+import { supabase } from '@/lib/db';
 
 const dataDir = path.join(process.cwd(), 'data');
 const dbFile = path.join(dataDir, 'schedule-settings.json');
@@ -82,7 +83,25 @@ if (!fs.existsSync(dbFile)) {
 export async function getScheduleSettings(): Promise<ScheduleSettings> {
   try {
     const raw = fs.readFileSync(dbFile, 'utf-8');
-    return JSON.parse(raw);
+    const settings = JSON.parse(raw) as ScheduleSettings;
+
+    // Services are sourced from Supabase for durable persistence (works in production).
+    const { data: treatments, error } = await supabase
+      .from('treatments')
+      .select('id, name, description, price, duration')
+      .order('created_at', { ascending: true });
+
+    if (!error && treatments && treatments.length > 0) {
+      settings.availableServices = treatments.map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description || '',
+        price: Number(t.price),
+        duration: Number(t.duration),
+      }));
+    }
+
+    return settings;
   } catch (err) {
     return defaultSettings;
   }
@@ -127,12 +146,34 @@ export async function toggleSlotBlock(date: string, time: string) {
 }
 
 export async function updateServices(services: ServiceItem[]) {
-  const current = await getScheduleSettings();
-  const updated = {
-    ...current,
-    availableServices: services,
-  };
-  fs.writeFileSync(dbFile, JSON.stringify(updated, null, 2), 'utf-8');
+  // Source of truth for services is Supabase `treatments` table.
+  // Replace all records with latest admin catalog.
+  const { error: deleteError } = await supabase
+    .from('treatments')
+    .delete()
+    .not('id', 'is', null);
+
+  if (deleteError) {
+    throw new Error(`Failed to clear old services: ${deleteError.message}`);
+  }
+
+  const payload = services.map((service) => ({
+    name: service.name,
+    description: service.description || '',
+    price: Number(service.price) || 0,
+    duration: Number(service.duration) || 30,
+  }));
+
+  if (payload.length > 0) {
+    const { error: insertError } = await supabase
+      .from('treatments')
+      .insert(payload);
+
+    if (insertError) {
+      throw new Error(`Failed to save services: ${insertError.message}`);
+    }
+  }
+
   revalidatePath('/book');
   revalidatePath('/dashboard/schedule');
   return { success: true };
