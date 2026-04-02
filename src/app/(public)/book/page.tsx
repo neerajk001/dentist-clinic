@@ -21,7 +21,6 @@ export default async function BookingPage() {
         <BookingForm 
           minDateStr={settings.global.startDate} 
           maxDateStr={settings.global.endDate} 
-          services={settings.availableServices}
         />
       </div>
     </div>

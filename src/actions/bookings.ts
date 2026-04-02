@@ -8,18 +8,35 @@ import { format } from 'date-fns';
 
 function getAllowedBookingDateStrings() {
   const tomorrow = new Date();
-  tomorrow.setHours(0, 0, 0, 0);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  // Ensure we cover varying timezone discrepancies by allowing a wider window (Today through Next 3 Days)
+  // This avoids cases where the client's 'tomorrow' evaluates strictly outside the server's 'tomorrow/dayAfter' array.
+  const today = new Date();
+  
+  const days = [];
+  for (let i = 0; i <= 3; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    days.push(format(d, 'yyyy-MM-dd'));
+  }
 
-  const dayAfterTomorrow = new Date(tomorrow);
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-
-  return [format(tomorrow, 'yyyy-MM-dd'), format(dayAfterTomorrow, 'yyyy-MM-dd')];
+  return days;
 }
 
-export async function getAvailableSlots(date: Date, serviceDuration: number = 30) {
+export async function getAvailableSlots(dateObjectOrString: Date | string) {
+  const serviceDuration = 30;
   const settings = await getScheduleSettings();
-  const dateStr = format(date, 'yyyy-MM-dd');
+  let dateStr: string;
+  let targetDate: Date;
+
+  if (typeof dateObjectOrString === 'string') {
+    dateStr = dateObjectOrString;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    targetDate = new Date(year, month - 1, day);
+  } else {
+    targetDate = dateObjectOrString;
+    dateStr = format(targetDate, 'yyyy-MM-dd');
+  }
+
   const allowedDates = getAllowedBookingDateStrings();
 
   // Booking is limited to tomorrow and day after tomorrow only.
@@ -37,10 +54,10 @@ export async function getAvailableSlots(date: Date, serviceDuration: number = 30
     return [];
   }
 
-  const startOfDay = new Date(date);
+  const startOfDay = new Date(targetDate);
   startOfDay.setHours(0, 0, 0, 0);
 
-  const endOfDay = new Date(date);
+  const endOfDay = new Date(targetDate);
   endOfDay.setHours(23, 59, 59, 999);
 
   // Fetch existing appointments
@@ -105,9 +122,8 @@ export async function getAvailableSlots(date: Date, serviceDuration: number = 30
 }
 
 const bookingSchema = z.object({
-  date: z.coerce.date(),
+  date: z.string(), // "yyyy-MM-dd"
   timeSlot: z.string(), // "09:00"
-  serviceId: z.string(),
   name: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   complaint: z.string().optional(),
@@ -118,15 +134,8 @@ export type BookingFormData = z.infer<typeof bookingSchema>;
 export async function bookAppointment(formData: BookingFormData) {
   try {
     const validated = bookingSchema.parse(formData);
-    const settings = await getScheduleSettings();
-    const service = settings.availableServices.find((s) => s.id === validated.serviceId);
-
-    if (!service) {
-      return { success: false, error: 'Invalid service selected.' };
-    }
-
-    const duration = service.duration;
-    const selectedDateStr = format(new Date(validated.date), 'yyyy-MM-dd');
+    const duration = 30; // Hardcoded universal duration
+    const selectedDateStr = validated.date; // already "YYYY-MM-DD" per updated schema
     const allowedDates = getAllowedBookingDateStrings();
 
     if (!allowedDates.includes(selectedDateStr)) {
@@ -134,11 +143,12 @@ export async function bookAppointment(formData: BookingFormData) {
     }
 
     // Parse selected date and time
-    const appointmentDate = new Date(validated.date);
+    const [year, month, day] = selectedDateStr.split('-').map(Number);
+    const appointmentDate = new Date(year, month - 1, day);
     const [hours, minutes] = validated.timeSlot.split(':');
     appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-    const slots = await getAvailableSlots(new Date(validated.date), duration);
+    const slots = await getAvailableSlots(selectedDateStr, duration);
     if (!slots.includes(validated.timeSlot)) {
       return {
         success: false,
@@ -223,7 +233,7 @@ export async function bookAppointment(formData: BookingFormData) {
         date: appointmentDate.toISOString(),
         duration: duration,
         end_time: appointmentEndTime.toISOString(),
-        service_type: service.name,
+        service_type: 'Consultation',
         time_slot: `${validated.timeSlot} - ${appointmentEndTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`,
         complaint: validated.complaint || '',
         status: 'scheduled',

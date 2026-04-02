@@ -19,7 +19,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/dashboard/appointments', label: 'Appointments', icon: '📅' },
     { href: '/dashboard/patients', label: 'Patients', icon: '👥' },
-    { href: '/dashboard/treatments', label: 'Treatments', icon: '💊' },
     { href: '/dashboard/schedule', label: 'Schedule Settings', icon: '⚙️' },
     ...(role === 'doctor'
       ? [{ href: '/dashboard/doctor', label: 'My Patients', icon: '👨‍⚕️' }]

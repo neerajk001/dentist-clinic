@@ -12,7 +12,8 @@ import {
   ChevronDown,
   ChevronRight,
   Minus,
-  Plus
+  Plus,
+  Phone
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -62,38 +63,20 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Book Now Button */}
-            <div className="hidden md:block">
-              <Button onClick={() => router.push('/book')} variant="outline" className="rounded-full px-5 py-2 h-auto text-[12px] font-semibold border-gray-200 hover:bg-gray-50 text-[#18181b]">
-                Book Now
-              </Button>
-            </div>
-
-            {/* Mobile Menu Toggle */}
-            <div className="md:hidden">
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-gray-500">
-                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+            {/* Book by Calling Button */}
+            <div className="block">
+              <a href="tel:+1234567890">
+                <Button variant="outline" className="rounded-full px-5 py-2 h-auto text-[12px] font-semibold border-gray-200 hover:bg-gray-50 text-[#18181b] flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5" />
+                  Call to Book
+                </Button>
+              </a>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Menu Panel */}
-      {isMenuOpen && (
-        <div className="md:hidden absolute top-[56px] left-0 w-full bg-white border-b border-gray-100 z-40 p-4 shadow-lg">
-          <div className="flex flex-col space-y-4">
-            {['Service', 'About', 'Blog', 'Contact'].map((item) => (
-              <Link key={item} href="#" className="font-semibold text-[13px] text-[#18181b]">
-                {item}
-              </Link>
-            ))}
-            <Button onClick={() => router.push('/book')} variant="outline" className="w-full justify-center text-[13px]">
-              Book Now
-            </Button>
-          </div>
-        </div>
-      )}
+
 
       {/* Hero Section */}
       <section className="px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto mb-16 lg:mb-20 lg:pt-2">
@@ -105,16 +88,13 @@ export default function Home() {
                 Your <span className={TEXT_ACCENT}>Smile</span><br />
                 Matters to us
               </h1>
-              <p className="text-gray-500 text-[12px] xl:text-[13px] leading-relaxed mb-4 max-w-[380px]">
+              <p className="text-gray-500 text-[12px] xl:text-[13px] leading-relaxed max-w-[380px]">
                 Specially designed for patients seeking dentistry abroad, we offer you bespoke expertise at a price that is unbelievably.
               </p>
-              <Button onClick={() => router.push('/book')} className={`${PRIMARY_COLOR} hover:bg-black text-white rounded-[24px] px-6 py-3 lg:py-4 xl:py-5 h-auto text-[12px] lg:text-[13px] font-medium`}>
-                Book Appointment
-              </Button>
             </div>
 
-            {/* Bottom 2 Images on Left Side */}
-            <div className="grid grid-cols-2 gap-3 lg:gap-4 mt-auto">
+            {/* Middle 2 Images on Left Side */}
+            <div className="grid grid-cols-2 gap-3 lg:gap-4 mb-10">
               {/* Dental Tools Image with Badge */}
               <div className="relative h-[160px] sm:h-[220px] lg:h-[110px] xl:h-[150px] rounded-[16px] xl:rounded-[24px] overflow-hidden bg-gray-100">
                 <Image
@@ -150,6 +130,18 @@ export default function Home() {
                   className="object-cover"
                 />
               </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3 mt-auto pt-4">
+              <Button onClick={() => router.push('/book')} className={`${PRIMARY_COLOR} hover:bg-black text-white rounded-[24px] px-6 py-3 lg:py-4 xl:py-5 h-auto text-[12px] lg:text-[13px] font-medium`}>
+                Book Appointment
+              </Button>
+              <a href="tel:+1234567890">
+                <Button variant="outline" className="w-full sm:w-auto border-gray-200 rounded-[24px] px-6 py-3 lg:py-4 xl:py-5 h-auto text-[12px] lg:text-[13px] font-medium flex items-center justify-center gap-2 text-[#18181b] hover:bg-gray-50">
+                  <Phone className="w-4 h-4" />
+                  Call to Book
+                </Button>
+              </a>
             </div>
           </div>
 

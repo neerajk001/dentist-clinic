@@ -145,36 +145,3 @@ export async function toggleSlotBlock(date: string, time: string) {
   return updateGlobalSchedule({ blockedSlots });
 }
 
-export async function updateServices(services: ServiceItem[]) {
-  // Source of truth for services is Supabase `treatments` table.
-  // Replace all records with latest admin catalog.
-  const { error: deleteError } = await supabase
-    .from('treatments')
-    .delete()
-    .not('id', 'is', null);
-
-  if (deleteError) {
-    throw new Error(`Failed to clear old services: ${deleteError.message}`);
-  }
-
-  const payload = services.map((service) => ({
-    name: service.name,
-    description: service.description || '',
-    price: Number(service.price) || 0,
-    duration: Number(service.duration) || 30,
-  }));
-
-  if (payload.length > 0) {
-    const { error: insertError } = await supabase
-      .from('treatments')
-      .insert(payload);
-
-    if (insertError) {
-      throw new Error(`Failed to save services: ${insertError.message}`);
-    }
-  }
-
-  revalidatePath('/book');
-  revalidatePath('/dashboard/schedule');
-  return { success: true };
-}

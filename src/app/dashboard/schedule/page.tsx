@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getScheduleSettings, updateGlobalSchedule, toggleDayBlock, toggleSlotBlock, updateServices, ScheduleSettings, Shift, BlockedSlot, ServiceItem } from '@/actions/schedule_settings';
+import { getScheduleSettings, updateGlobalSchedule, toggleDayBlock, toggleSlotBlock, ScheduleSettings, Shift, BlockedSlot } from '@/actions/schedule_settings';
 import { format, addDays, isSameDay, parseISO } from 'date-fns';
 
 export default function ScheduleSettingsPage() {
@@ -12,11 +12,6 @@ export default function ScheduleSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [services, setServices] = useState<ServiceItem[]>([]);
-
-  const initialServiceState: ServiceItem = { id: '', name: '', duration: 30, price: 100, description: '' };
-  const [serviceForm, setServiceForm] = useState<ServiceItem>(initialServiceState);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -26,80 +21,10 @@ export default function ScheduleSettingsPage() {
     setLoading(true);
     const data = await getScheduleSettings();
     setSettings(data.global);
-    setServices(data.availableServices || []);
     setLoading(false);
   }
 
-  async function persistServices(nextServices: ServiceItem[]) {
-    const previous = services;
-    setSaveError(null);
-    setServices(nextServices);
-    setSaving(true);
-    try {
-      await updateServices(nextServices);
-      await loadSettings();
-    } catch (error) {
-      setServices(previous);
-      setSaveError('Failed to save services. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  }
 
-  async function handleServiceFormSubmit() {
-    if (!serviceForm.name.trim()) return;
-
-    // ID is optional in UI; generate if not provided.
-    const currentForm: ServiceItem = {
-      ...serviceForm,
-      id: serviceForm.id.trim() || `service-${Date.now()}`,
-      name: serviceForm.name.trim(),
-      description: serviceForm.description.trim(),
-      duration: serviceForm.duration > 0 ? serviceForm.duration : 30,
-      price: serviceForm.price >= 0 ? serviceForm.price : 0,
-    };
-
-    let updatedServices: ServiceItem[];
-    if (editingIndex !== null) {
-      updatedServices = [...services];
-      updatedServices[editingIndex] = currentForm;
-      setEditingIndex(null);
-    } else {
-      updatedServices = [...services, currentForm];
-    }
-
-    await persistServices(updatedServices);
-    setServiceForm(initialServiceState);
-  }
-
-  function editService(idx: number) {
-    setServiceForm(services[idx]);
-    setEditingIndex(idx);
-  }
-
-  function cancelEdit() {
-    setServiceForm(initialServiceState);
-    setEditingIndex(null);
-  }
-
-  async function handleRemoveService(index: number) {
-    const newServices = [...services];
-    newServices.splice(index, 1);
-    await persistServices(newServices);
-  }
-
-  async function handleSaveServices() {
-    setSaveError(null);
-    setSaving(true);
-    try {
-      await updateServices(services);
-      await loadSettings();
-    } catch (error) {
-      setSaveError('Failed to save services. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleSaveRange() {
     if (!settings) return;
@@ -290,126 +215,7 @@ export default function ScheduleSettingsPage() {
         </section>
       </div>
 
-      {/* Services Configuration Panel */}
-      <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mt-8">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold">Services & Treatments</h2>
-          <p className="text-sm text-gray-500">Manage the services offered on the public booking page. Updates reflect instantly.</p>
-          {saveError && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2 mt-3">{saveError}</p>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          
-          {/* Left Column: Form Editor */}
-          <div className="bg-indigo-50/50 p-6 rounded-xl border border-indigo-100 flex flex-col gap-4">
-            <h3 className="font-bold text-indigo-900">{editingIndex !== null ? 'Edit Service' : 'Add New Service'}</h3>
-            
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Service ID (optional, auto-generated)</label>
-              <Input 
-                value={serviceForm.id} 
-                onChange={(e) => setServiceForm({...serviceForm, id: e.target.value})} 
-                placeholder="e.g. teeth_whitening" 
-                className="bg-white text-sm" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Display Name *</label>
-              <Input 
-                value={serviceForm.name} 
-                onChange={(e) => setServiceForm({...serviceForm, name: e.target.value})} 
-                placeholder="Teeth Whitening" 
-                className="bg-white text-sm font-semibold" 
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Duration (Min)</label>
-                <Input 
-                  type="number" 
-                  value={serviceForm.duration} 
-                  onChange={(e) => setServiceForm({...serviceForm, duration: Number(e.target.value)})} 
-                  className="bg-white text-sm" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Price ($)</label>
-                <Input 
-                  type="number" 
-                  value={serviceForm.price} 
-                  onChange={(e) => setServiceForm({...serviceForm, price: Number(e.target.value)})} 
-                  className="bg-white text-sm" 
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-              <Input 
-                value={serviceForm.description} 
-                onChange={(e) => setServiceForm({...serviceForm, description: e.target.value})} 
-                className="bg-white text-sm" 
-              />
-            </div>
 
-            <div className="flex gap-2 mt-2">
-              <Button onClick={handleServiceFormSubmit} disabled={!serviceForm.name} className="flex-1 bg-indigo-900 text-white hover:bg-indigo-800">
-                {editingIndex !== null ? 'Update Service' : 'Add Service'}
-              </Button>
-              {editingIndex !== null && (
-                <Button onClick={cancelEdit} variant="outline" className="flex-1 border-indigo-200 text-indigo-600 hover:bg-indigo-100">
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: List of Saved Items */}
-          <div className="lg:col-span-2 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
-               <h3 className="font-bold text-gray-900">Current Services ({services.length})</h3>
-               <Button onClick={handleSaveServices} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white shadow-md">
-                 {saving ? 'Saving...' : 'Save Catalog to Server'}
-               </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 auto-rows-max">
-              {services.map((service, idx) => (
-                <div key={idx} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col transition-all hover:border-indigo-300">
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className="font-bold text-gray-900 leading-tight pr-2">{service.name}</h4>
-                    <span className="font-black text-[#00d4ff] bg-cyan-50 px-2 py-0.5 rounded-full text-sm">${service.price}</span>
-                  </div>
-                  <p className="text-xs text-gray-400 font-mono mb-3 uppercase tracking-wider">{service.id}</p>
-                  
-                  <p className="text-sm text-gray-600 mb-5 flex-1 line-clamp-2">{service.description || <span className="italic opacity-50">No description provided</span>}</p>
-                  
-                  <div className="flex justify-between items-center mt-auto border-t border-gray-50 pt-3">
-                    <span className="text-xs font-semibold bg-gray-100 px-2 py-1 rounded-md text-gray-600 flex items-center gap-1">
-                      ⏱ {service.duration} Min
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => editService(idx)} className="h-7 text-xs font-semibold text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3">
-                        Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleRemoveService(idx)} className="h-7 text-xs font-semibold text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3">
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {services.length === 0 && (
-                <div className="sm:col-span-2 py-12 text-center text-gray-400 border-2 border-dashed border-gray-100 rounded-xl">
-                  No services configured. Add one from the panel.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
