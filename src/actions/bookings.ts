@@ -148,7 +148,7 @@ export async function bookAppointment(formData: BookingFormData) {
     const [hours, minutes] = validated.timeSlot.split(':');
     appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-    const slots = await getAvailableSlots(selectedDateStr, duration);
+    const slots = await getAvailableSlots(selectedDateStr);
     if (!slots.includes(validated.timeSlot)) {
       return {
         success: false,
